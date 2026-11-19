@@ -1,0 +1,22 @@
+# Tools for the stage-show skill. Install them once with `<skill>/install` (README.md, Install).
+# Then `<skill>/run <command>` runs a command with them. After a pin change: mise lock
+min_version = "2026.8.14"    # older releases rewrite mise.lock on install
+[tools]
+python = "3.14"
+"conda:poppler" = "26.11.0"
+"conda:tesseract" = "5.5.4"
+
+[settings]
+python.venv_stdlib = true     # a venv with pip (mise would create one with uv, without pip)
+
+[env]
+_.python.venv = { path = "{{env.HOME}}/.cache/stage-show/venv", create = true }
+
+[tasks.setup]
+description = "Install Pillow, segno, zxing-cpp and Playwright, with its Chromium, into the venv"
+run = [
+  # rebuild a venv left on another Python (a pin change, a pruned Python)
+  ''': "${VIRTUAL_ENV:?}"; [ "$("$VIRTUAL_ENV/bin/python" -c 'import sys; print(sys.base_prefix)' 2>/dev/null)" = "$(PATH=${PATH#"$VIRTUAL_ENV/bin:"} python3 -c 'import sys; print(sys.base_prefix)')" ] || { echo "setup: the venv is on another Python; rebuilding it"; rm -rf "$VIRTUAL_ENV" && PATH=${PATH#"$VIRTUAL_ENV/bin:"} python3 -m venv "$VIRTUAL_ENV"; }''',
+  "python -m pip install --disable-pip-version-check -q -r requirements.txt",
+  "python -m playwright install chromium",
+]

@@ -1,0 +1,28 @@
+#!/bin/sh
+# Runs a command in the current folder with the skill's tools (mise.toml); without mise, or with STAGE_SHOW_NO_MISE=1, as it is.
+[ $# -gt 0 ] || { echo "usage: $0 <command> [argument...]" >&2; exit 2; }
+dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P) || exit 1
+mise=$(command -v mise 2>/dev/null) || for mise in "$HOME/.local/bin/mise" /opt/homebrew/bin/mise /usr/local/bin/mise; do [ -x "$mise" ] && break; done
+if [ "${STAGE_SHOW_NO_MISE:-}" = 1 ] || [ ! -x "$mise" ]; then
+  "$@"; rc=$?
+  [ $rc -eq 127 ] && ! command -v "$1" >/dev/null 2>&1 &&
+    echo "stage-show: $1 not found: install mise, or the tools by hand ($dir/README.md, Install)" >&2
+  exit $rc
+fi
+# mise reads no config from the folders above the skill
+export MISE_CEILING_PATHS="$(dirname -- "$dir")"
+# mise exec fails on a read-only cache (a sandboxed agent): then use a temp cache of our own
+cache=${MISE_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/mise}
+[ -z "$MISE_CACHE_DIR$XDG_CACHE_HOME" ] && [ "$(uname)" = Darwin ] && cache=$HOME/Library/Caches/mise
+if ! { mkdir -p "$cache" && mkdir "$cache/.run-$$" && rmdir "$cache/.run-$$"; } 2>/dev/null; then
+  d="${TMPDIR:-/tmp}/stage-show-mise-$(id -u)"; mkdir -p "$d" 2>/dev/null
+  [ -O "$d" ] && [ -w "$d" ] || d=$(mktemp -d) || exit 1   # another user may own that name on a shared host
+  export MISE_CACHE_DIR="$d"
+fi
+# trust --show prints one line per config folder down to the skill's: the last line is the skill's own
+if "$mise" -C "$dir" trust --show 2>/dev/null | tail -n 1 | grep -q ': untrusted$'; then
+  q=$(printf '%s\n' "$dir/install" | sed "s/'/'\\\\''/g")
+  printf "stage-show: mise does not trust the skill's config yet; run: '%s'\n" "$q" >&2
+  exit 1
+fi
+exec "$mise" -C "$dir" exec -- sh -c 'cd "$1" && shift && exec "$@"' sh "$PWD" "$@"
