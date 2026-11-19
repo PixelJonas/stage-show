@@ -2,7 +2,7 @@
 name: stage-show
 description: Turn a deck (.pptx, PDF, Keynote, slide images) into a stage show, an animated presentation in one offline HTML file the speaker clicks through on the big screen. Use when slides should be animated or redesigned for a talk or event, also from a .pptx (the result is HTML; editing the .pptx itself is another job), or when an existing stage show needs changes.
 license: MIT
-compatibility: Needs a POSIX shell (Linux or macOS; Windows via WSL) and mise, which installs Python, poppler, tesseract, Pillow, segno, zxing-cpp and Playwright with Chromium (README); without mise, python3 3.9 or newer with Pillow (requirements.txt), poppler 21.11 or newer, tesseract and a browser the agent can drive. Also an agent that can look at images, and network access for fonts and fact checks. The built show runs offline in Chrome or Chromium.
+compatibility: Needs a POSIX shell (Linux or macOS; Windows via WSL) and mise, which installs Python, poppler, Pillow, segno, zxing-cpp and Playwright, Chromium where Chrome is missing, and tesseract on request (README); without mise, python3 3.9 or newer with Pillow (requirements.txt), poppler 21.11 or newer and a browser the agent can drive, tesseract for OCR. Also an agent that can look at images, and network access for fonts and fact checks. The built show runs offline in Chrome or Chromium.
 ---
 
 # Stage show

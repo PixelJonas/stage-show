@@ -19,10 +19,15 @@ if ! { mkdir -p "$cache" && mkdir "$cache/.run-$$" && rmdir "$cache/.run-$$"; } 
   [ -O "$d" ] && [ -w "$d" ] || d=$(mktemp -d) || exit 1   # another user may own that name on a shared host
   export MISE_CACHE_DIR="$d"
 fi
+q=$(printf '%s\n' "$dir/install" | sed "s/'/'\\\\''/g")
 # trust --show prints one line per config folder down to the skill's: the last line is the skill's own
 if "$mise" -C "$dir" trust --show 2>/dev/null | tail -n 1 | grep -q ': untrusted$'; then
-  q=$(printf '%s\n' "$dir/install" | sed "s/'/'\\\\''/g")
   printf "stage-show: mise does not trust the skill's config yet; run: '%s'\n" "$q" >&2
   exit 1
+fi
+# tesseract only after `install ocr`: mise exec would install a missing tool on every call
+if ! "$mise" -C "$dir" where conda:tesseract >/dev/null 2>&1; then
+  [ "$1" = tesseract ] && { printf "stage-show: tesseract (OCR) is not installed; run: '%s' ocr\n" "$q" >&2; exit 127; }
+  export MISE_DISABLE_TOOLS="${MISE_DISABLE_TOOLS:+$MISE_DISABLE_TOOLS,}conda:tesseract"
 fi
 exec "$mise" -C "$dir" exec -- sh -c 'cd "$1" && shift && exec "$@"' sh "$PWD" "$@"
