@@ -1,4 +1,4 @@
-# Tools for the stage-show skill. Install them once with `<skill>/install` (README.md, Install).
+# Tools for the stage-show skill. Install them once with `<skill>/install`, tesseract with `<skill>/install ocr` (README.md, Install).
 # Then `<skill>/run <command>` runs a command with them. After a pin change: mise lock
 min_version = "2026.8.14"    # older releases rewrite mise.lock on install
 [tools]
@@ -13,10 +13,11 @@ python.venv_stdlib = true     # a venv with pip (mise would create one with uv, 
 _.python.venv = { path = "{{env.HOME}}/.cache/stage-show/venv", create = true }
 
 [tasks.setup]
-description = "Install Pillow, segno, zxing-cpp and Playwright, with its Chromium, into the venv"
+description = "Install Pillow, segno, zxing-cpp and Playwright into the venv, and Chromium unless Playwright launches an installed Chrome"
 run = [
   # rebuild a venv left on another Python (a pin change, a pruned Python)
   ''': "${VIRTUAL_ENV:?}"; [ "$("$VIRTUAL_ENV/bin/python" -c 'import sys; print(sys.base_prefix)' 2>/dev/null)" = "$(PATH=${PATH#"$VIRTUAL_ENV/bin:"} python3 -c 'import sys; print(sys.base_prefix)')" ] || { echo "setup: the venv is on another Python; rebuilding it"; rm -rf "$VIRTUAL_ENV" && PATH=${PATH#"$VIRTUAL_ENV/bin:"} python3 -m venv "$VIRTUAL_ENV"; }''',
-  "python -m pip install --disable-pip-version-check -q -r requirements.txt",
-  "python -m playwright install chromium",
+  "python -m pip install --disable-pip-version-check --no-cache-dir -q -r requirements.txt",
+  '''python -I -c 'from playwright.sync_api import sync_playwright
+with sync_playwright() as p: p.chromium.launch(channel="chrome").close()' 2>/dev/null && echo "setup: Playwright launches the installed Chrome; no Chromium needed" || python -m playwright install chromium''',
 ]

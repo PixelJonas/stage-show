@@ -1,5 +1,6 @@
 #!/bin/sh
-# Installs the skill's tools and venv with mise (mise.toml, requirements.txt), from any folder: <skill>/install
+# Installs the skill's tools and venv with mise (mise.toml, requirements.txt), from any folder: <skill>/install; with tesseract for OCR: <skill>/install ocr
+case ${1:-} in ''|ocr) ;; *) echo "usage: $0 [ocr]" >&2; exit 2 ;; esac
 dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P) || exit 1
 chmod +x "$dir/run" "$dir/install" 2>/dev/null
 mise=$(command -v mise 2>/dev/null) || for mise in "$HOME/.local/bin/mise" /opt/homebrew/bin/mise /usr/local/bin/mise; do [ -x "$mise" ] && break; done
@@ -9,4 +10,21 @@ if [ ! -x "$mise" ]; then
 fi
 # mise reads no config from the folders above the skill: a copy inside a project leaves that project's config alone
 export MISE_CEILING_PATHS="$(dirname -- "$dir")"
-cd "$dir" && "$mise" trust "$dir/mise.toml" && "$mise" install && "$mise" run setup
+# downloads and temp files go to a folder removed at the end; conda keeps its packages in mise's data folder, so the ones this run adds go too
+tmp=$(mktemp -d) || exit 1
+pkgs=${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise}/conda-packages
+had=$(ls -A "$pkgs" 2>/dev/null)
+cleanup() {
+  rm -rf "$tmp"
+  for f in "$pkgs"/* "$pkgs"/.[!.]*; do
+    printf '%s\n' "$had" | grep -qxF -- "${f##*/}" || rm -rf "$f"
+  done
+}
+trap cleanup EXIT
+trap 'exit 130' HUP INT TERM
+export MISE_CACHE_DIR="$tmp" TMPDIR="$tmp"
+cd "$dir" && "$mise" trust "$dir/mise.toml" || exit 1
+# tesseract on request, or to keep an earlier `install ocr` current
+[ "${1:-}" = ocr ] || [ -n "$("$mise" ls --installed conda:tesseract 2>/dev/null)" ] ||
+  export MISE_DISABLE_TOOLS="${MISE_DISABLE_TOOLS:+$MISE_DISABLE_TOOLS,}conda:tesseract"
+"$mise" install && "$mise" run setup

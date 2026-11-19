@@ -4,6 +4,8 @@
 
 **A revised deck.** Move everything in `source/` except earlier `vN/` folders into `source/v1/` (v2, … later), the received files included: a revision often keeps the old name, and copied over it, the hard-linked plain name in `v1/` takes the new content and a Keynote folder merges. Copy the new deck in, extract it, compare the new extract with the folder you just filled (`deck.md` or `deck.txt`, the contact sheets), and carry every change into content.md.
 
+**OCR.** Text that exists only as pixels needs tesseract: PDF pages without a text layer, slide images, the pictures of a `.key` whose text no export supplies. Run `<skill>/install ocr` before the first `tesseract` command.
+
 | in `source/` | content |
 |---|---|
 | `deck.md`, `theme.json` | PPTX text, notes, tables, SmartArt, chart data, pictures, video, footer and master text; theme. `[warning]` marks what was unreadable |
